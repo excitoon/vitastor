@@ -582,21 +582,7 @@ int disk_tool_t::prepare(std::vector<std::string> devices)
             for (const auto & uuid: get_new_data_parts(dev, osd_per_disk, max_other_percent))
             {
                 options["force"] = true;
-                /// There are only few partitions here, or even one, no reason to make it `O(1)`.
-                bool found = false;
-                for (const auto & partition : dev.pt["partitions"].array_items())
-                {
-                    if (partition["uuid"] == uuid)
-                    {
-                        options["data_device"] = partition["node"].string_value();
-                        found = true;
-                        break;
-                    }
-                }
-                if (!found)
-                {
-                    throw std::runtime_error("Could not find partition " + uuid);
-                }
+                options["data_device"] = "/dev/disk/by-partuuid/"+strtolower(uuid);
                 if (hybrid)
                 {
                     // Select/create journal and metadata partitions
