@@ -5,6 +5,18 @@ project(vitastor)
 include(GNUInstallDirs)
 include(CTest)
 
+include (FetchContent)
+set (BOOST_INCLUDE_LIBRARIES "json")
+FetchContent_Declare (boost URL "https://github.com/boostorg/boost/releases/download/boost-1.81.0/boost-1.81.0.tar.xz" URL_MD5 "6cf0cdd797bca685910d527ae3c08cb3")
+FetchContent_MakeAvailable (boost)
+include_directories ("${boost_assert_SOURCE_DIR}/include")
+include_directories ("${boost_config_SOURCE_DIR}/include")
+include_directories ("${boost_core_SOURCE_DIR}/include")
+include_directories ("${boost_json_SOURCE_DIR}/include")
+include_directories ("${boost_throw_exception_SOURCE_DIR}/include")
+include_directories ("${boost_system_SOURCE_DIR}/include")
+include_directories ("${boost_variant2_SOURCE_DIR}/include")
+
 set(WITH_QEMU false CACHE BOOL "Build QEMU driver inside Vitastor source tree")
 set(WITH_FIO true CACHE BOOL "Build FIO driver")
 set(QEMU_PLUGINDIR qemu CACHE STRING "QEMU plugin directory suffix (qemu-kvm on RHEL)")
@@ -209,6 +221,7 @@ add_executable(vitastor-disk
 )
 target_link_libraries(vitastor-disk
 	tcmalloc_minimal
+    boost_json
 	${LIBURING_LIBRARIES}
 )
 

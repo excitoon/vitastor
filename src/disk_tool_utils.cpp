@@ -4,6 +4,9 @@
 #include <sys/wait.h>
 #include <dirent.h>
 
+#include <boost/json/parse.hpp>
+#include <boost/json/serialize.hpp>
+
 #include "disk_tool.h"
 #include "rw_blocking.h"
 #include "str_util.h"
@@ -316,6 +319,7 @@ json11::Json read_parttable(std::string dev)
     if (part_dump != "")
     {
         std::string err;
+        part_dump = boost::json::serialize(boost::json::parse(part_dump, {}, { .allow_trailing_commas = true }));
         pt = json11::Json::parse(part_dump, err);
         if (err != "")
         {
