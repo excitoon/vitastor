@@ -379,33 +379,6 @@ json11::Json disk_tool_t::add_partitions(vitastor_dev_info_t & devinfo, std::vec
         }
         break;
     }
-    // Wait until device symlinks in /dev/disk/by-partuuid/ appear
-    bool exists = false;
-    iter = 0;
-    while (!exists && iter < 300) // max 30 sec
-    {
-        exists = true;
-        for (const auto & part: new_parts)
-        {
-            std::string link_path = "/dev/disk/by-partuuid/"+strtolower(part["uuid"].string_value());
-            struct stat st;
-            if (lstat(link_path.c_str(), &st) < 0)
-            {
-                if (errno == ENOENT)
-                    exists = false;
-                else
-                {
-                    fprintf(stderr, "Failed to lstat %s: %s\n", link_path.c_str(), strerror(errno));
-                    return {};
-                }
-            }
-        }
-        if (!exists)
-        {
-            struct timespec ts = { .tv_sec = 0, .tv_nsec = 100000000 }; // 100ms
-            iter += (nanosleep(&ts, NULL) == 0);
-        }
-    }
     devinfo.pt = newpt;
     devinfo.osd_part_count += sizes.size();
     devinfo.free = free_from_parttable(newpt);
