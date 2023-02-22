@@ -1,6 +1,6 @@
 [submodule "cpp-btree"]
 	path = cpp-btree
-	url = ../cpp-btree.git
+	url = ../../vitalif/cpp-btree.git
 [submodule "json11"]
 	path = json11
-	url = ../json11.git
+	url = ../../vitalif/json11.git
