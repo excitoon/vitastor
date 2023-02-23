@@ -718,9 +718,7 @@ protected:
                 exit(1);
             }
             uint64_t handle = *((uint64_t*)cur_req.handle);
-#ifdef DEBUG
             printf("request %lx +%x %lx\n", be64toh(cur_req.from), be32toh(cur_req.len), handle);
-#endif
             void *buf = NULL;
             cluster_op_t *op = new cluster_op_t;
             if (req_type == NBD_CMD_READ || req_type == NBD_CMD_WRITE)
@@ -739,9 +737,7 @@ protected:
             }
             op->callback = [this, buf, handle](cluster_op_t *op)
             {
-#ifdef DEBUG
                 printf("reply %lx e=%d\n", handle, op->retval);
-#endif
                 nbd_reply *reply = (nbd_reply*)buf;
                 reply->magic = htobe32(NBD_REPLY_MAGIC);
                 memcpy(reply->handle, &handle, 8);
