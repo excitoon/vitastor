@@ -33,7 +33,7 @@
 #define PEER_RDMA 4
 #define PEER_STOPPED 5
 
-#define VITASTOR_CONFIG_PATH "/etc/vitastor/vitastor.conf"
+#define VITASTOR_CONFIG_PATH "./vitastor.conf"
 
 #define MSGR_SENDP_HDR 1
 #define MSGR_SENDP_FREE 2
