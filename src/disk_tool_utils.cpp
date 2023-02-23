@@ -1,6 +1,8 @@
 // Copyright (c) Vitaliy Filippov, 2019+
 // License: VNPL-1.1 (see README.md for details)
 
+#include <filesystem>
+
 #include <sys/wait.h>
 #include <dirent.h>
 
@@ -104,20 +106,18 @@ static int check_queue_cache(std::string dev, std::string parent_dev)
     return trim(r) == "write through" ? 0 : -1;
 }
 
-// returns 1 = warning, -1 = error, 0 = success
-int disable_cache(std::string dev)
+int disable_cache_impl(std::string parent_dev_name, std::string dev)
 {
-    auto parent_dev = get_parent_device(dev);
-    if (parent_dev == "")
+    if (parent_dev_name == "")
         return 1;
-    auto scsi_disk = "/sys/block/"+parent_dev+"/device/scsi_disk";
+    auto scsi_disk = "/sys/block/"+parent_dev_name+"/device/scsi_disk";
     DIR *dir = opendir(scsi_disk.c_str());
     if (!dir)
     {
         if (errno == ENOENT)
         {
             // Not a SCSI/SATA device, just check /sys/block/.../queue/write_cache
-            return check_queue_cache(dev.substr(5), parent_dev);
+            return check_queue_cache(dev.substr(5), parent_dev_name);
         }
         else
         {
@@ -134,7 +134,7 @@ int disable_cache(std::string dev)
         {
             // Not a SCSI/SATA device, just check /sys/block/.../queue/write_cache
             closedir(dir);
-            return check_queue_cache(dev.substr(5), parent_dev);
+            return check_queue_cache(dev.substr(5), parent_dev_name);
         }
         scsi_disk += "/";
         scsi_disk += de->d_name;
@@ -165,6 +165,18 @@ int disable_cache(std::string dev)
         }
     }
     return 0;
+}
+
+// returns 1 = warning, -1 = error, 0 = success
+int disable_cache(std::string dev)
+{
+    auto parent_dev_name = get_parent_device(dev);
+    return disable_cache_impl(parent_dev_name, dev);
+}
+
+int disable_cache_by_parent_device(std::string parent_dev, std::string dev)
+{
+    return disable_cache_impl(std::filesystem::path(parent_dev).filename().string(), dev);
 }
 
 std::string get_parent_device(std::string dev)

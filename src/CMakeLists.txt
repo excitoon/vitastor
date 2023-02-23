@@ -5,6 +5,7 @@ project(vitastor)
 include(GNUInstallDirs)
 include(CTest)
 
+set (CMAKE_CXX_STANDARD 17)
 include (FetchContent)
 set (BOOST_INCLUDE_LIBRARIES "json")
 FetchContent_Declare (boost URL "https://github.com/boostorg/boost/releases/download/boost-1.81.0/boost-1.81.0.tar.xz" URL_MD5 "6cf0cdd797bca685910d527ae3c08cb3")

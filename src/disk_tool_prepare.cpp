@@ -72,7 +72,7 @@ int disk_tool_t::prepare_one(std::map<std::string, std::string> options, int is_
     {
         if (options[dev+"_device"] != "" && options["disable_"+dev+"_fsync"] == "auto")
         {
-            int r = disable_cache(realpath_str(options[dev+"_device"], false));
+            int r = disable_cache_by_parent_device(options.at(dev+"_parent_device"), options.at(dev+"_device"));
             if (r != 0)
             {
                 if (r == 1)
@@ -385,10 +385,10 @@ json11::Json disk_tool_t::add_partitions(vitastor_dev_info_t & devinfo, std::vec
     return new_parts;
 }
 
-std::vector<std::string> disk_tool_t::get_new_data_parts(vitastor_dev_info_t & dev,
+std::vector<std::pair<std::string, std::string>> disk_tool_t::get_new_data_parts(vitastor_dev_info_t & dev,
     uint64_t osd_per_disk, uint64_t max_other_percent)
 {
-    std::vector<std::string> use_parts;
+    std::vector<std::pair<std::string, std::string>> use_parts;
     uint64_t want_parts = 0;
     if (dev.pt.is_null())
     {
@@ -407,7 +407,7 @@ std::vector<std::string> disk_tool_t::get_new_data_parts(vitastor_dev_info_t & d
                 if (sb.is_null())
                 {
                     // Use this partition
-                    use_parts.push_back(part["uuid"].string_value());
+                    use_parts.emplace_back(part["node"].string_value(), part["uuid"].string_value());
                 }
                 else
                 {
@@ -436,7 +436,7 @@ std::vector<std::string> disk_tool_t::get_new_data_parts(vitastor_dev_info_t & d
         sizes.push_back("+");
         auto new_parts = add_partitions(dev, sizes);
         for (const auto & part: new_parts.array_items())
-            use_parts.push_back(part["uuid"].string_value());
+            use_parts.emplace_back(part["node"].string_value(), part["uuid"].string_value());
     }
     return use_parts;
 }
@@ -579,10 +579,13 @@ int disk_tool_t::prepare(std::vector<std::string> devices)
         if (!hybrid || dev.is_hdd)
         {
             // Select new partitions and create an OSD on each of them
-            for (const auto & uuid: get_new_data_parts(dev, osd_per_disk, max_other_percent))
+            for (const auto & [node, uuid] : get_new_data_parts(dev, osd_per_disk, max_other_percent))
             {
                 options["force"] = true;
-                options["data_device"] = "/dev/disk/by-partuuid/"+strtolower(uuid);
+                options["data_device"] = node;
+                options["data_device_uuid"] = uuid;
+                options["data_parent_device"] = dev.pt["device"].string_value();
+                options["data_parent_device_uuid"] = dev.pt["id"].string_value(); /// TODO Shall be checked later.
                 if (hybrid)
                 {
                     // Select/create journal and metadata partitions
