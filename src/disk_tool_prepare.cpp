@@ -358,7 +358,7 @@ json11::Json disk_tool_t::add_partitions(vitastor_dev_info_t & devinfo, std::vec
                     iter++;
                     // Run partprobe
                     std::string out;
-                    if (iter > 1 || (r = shell_exec({ "partprobe", devinfo.path }, "", &out, NULL)) != 0)
+                    if (iter > 1 || (r = shell_exec({ "sudo", "partprobe", devinfo.path }, "", &out, NULL)) != 0)
                     {
                         fprintf(
                             stderr, iter == 1 && r == 255
