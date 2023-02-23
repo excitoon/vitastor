@@ -559,7 +559,7 @@ json11::Json osd_t::on_load_pgs_checks_hook()
     assert(this->pgs.size() == 0);
     json11::Json::array checks = {
         json11::Json::object {
-            { "target", "LEASE" },
+            { "target", 4 /*LEASE*/ },
             { "lease", etcd_lease_id },
             { "key", base64_encode(st_cli.etcd_prefix+"/osd/state/"+std::to_string(osd_num)) },
         }
@@ -818,7 +818,7 @@ void osd_t::report_pg_states()
             // Check that the PG key does not exist
             // Failed check indicates an unsuccessful PG lock attempt in this case
             checks.push_back(json11::Json::object {
-                { "target", "VERSION" },
+                { "target", 0 /*VERSION*/ },
                 { "version", 0 },
                 { "key", state_key_base64 },
             });
@@ -827,7 +827,7 @@ void osd_t::report_pg_states()
         {
             // Check that the key is ours if it already exists
             checks.push_back(json11::Json::object {
-                { "target", "LEASE" },
+                { "target", 4 /*LEASE*/ },
                 { "lease", etcd_lease_id },
                 { "key", state_key_base64 },
             });
