@@ -95,15 +95,13 @@ http_co_t *http_init(timerfd_manager_t *tfd)
 http_co_t* open_websocket(timerfd_manager_t *tfd, const std::string & host, const std::string & path,
     int timeout, std::function<void(const http_response_t *msg)> response_callback)
 {
-    std::string request = "POST "+path+" HTTP/1.1\r\n"
+    std::string request = "GET "+path+" HTTP/1.1\r\n"
         "Host: "+host+"\r\n"
         "Upgrade: websocket\r\n"
         "Connection: upgrade\r\n"
-        "Content-Type: application/json\r\n"
-        "Content-Length: 2\r\n"
         "Sec-WebSocket-Key: x3JJHMbDL1EzLkh9GBhXDw==\r\n"
         "Sec-WebSocket-Version: 13\r\n"
-        "\r\n{}";
+        "\r\n";
     http_co_t *handler = new http_co_t();
     handler->tfd = tfd;
     handler->state = HTTP_CO_CLOSED;
