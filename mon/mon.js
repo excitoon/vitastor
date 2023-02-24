@@ -748,7 +748,7 @@ class Mon
         while (1)
         {
             const res = await this.etcd_call('/kv/txn', {
-                compare: [ { target: 'CREATE', create_revision: 0, key: b64(this.etcd_prefix+'/mon/master') } ],
+                compare: [ { target: 1 /*CREATE*/, create_revision: 0, key: b64(this.etcd_prefix+'/mon/master') } ],
                 success: [ { requestPut: { key: b64(this.etcd_prefix+'/mon/master'), value: b64(JSON.stringify(state)), lease: ''+this.etcd_lease_id } } ],
             }, this.etcd_start_timeout, 0);
             if (res.succeeded)
@@ -892,12 +892,12 @@ class Mon
             for (const osd_num of this.all_osds())
             {
                 const key = b64(this.etcd_prefix+'/osd/state/'+osd_num);
-                checks.push({ key, target: 'MOD', result: 'LESS', mod_revision: ''+this.etcd_watch_revision });
+                checks.push({ key, target: 2 /*MOD*/, result: 2 /*LESS*/, mod_revision: ''+this.etcd_watch_revision });
             }
             const res = await this.etcd_call('/kv/txn', {
                 compare: [
-                    { key: b64(this.etcd_prefix+'/mon/master'), target: 'LEASE', lease: ''+this.etcd_lease_id },
-                    { key: b64(this.etcd_prefix+'/config/pgs'), target: 'MOD', mod_revision: ''+this.etcd_watch_revision, result: 'LESS' },
+                    { key: b64(this.etcd_prefix+'/mon/master'), target: 4 /*LEASE*/, lease: ''+this.etcd_lease_id },
+                    { key: b64(this.etcd_prefix+'/config/pgs'), target: 2 /*MOD*/, mod_revision: ''+this.etcd_watch_revision, result: 2 /*LESS*/ },
                     ...checks,
                 ],
                 success: [
@@ -983,9 +983,9 @@ class Mon
             // Sooo we probably want to change our storage scheme for PG histories...
             request.compare.push({
                 key: b64(this.etcd_prefix+'/pg/history/'+pool_id+'/'+(i+1)),
-                target: 'MOD',
+                target: 2 /*MOD*/,
                 mod_revision: ''+this.etcd_watch_revision,
-                result: 'LESS',
+                result: 2 /*LESS*/,
             });
             if (pg_history[i])
             {
@@ -1330,8 +1330,8 @@ class Mon
     async save_pg_config(etcd_request = { compare: [], success: [] })
     {
         etcd_request.compare.push(
-            { key: b64(this.etcd_prefix+'/mon/master'), target: 'LEASE', lease: ''+this.etcd_lease_id },
-            { key: b64(this.etcd_prefix+'/config/pgs'), target: 'MOD', mod_revision: ''+this.etcd_watch_revision, result: 'LESS' },
+            { key: b64(this.etcd_prefix+'/mon/master'), target: 4 /*LEASE*/, lease: ''+this.etcd_lease_id },
+            { key: b64(this.etcd_prefix+'/config/pgs'), target: 2 /*MOD*/, mod_revision: ''+this.etcd_watch_revision, result: 2 /*LESS*/ },
         );
         etcd_request.success.push(
             { requestPut: { key: b64(this.etcd_prefix+'/config/pgs'), value: b64(JSON.stringify(this.state.config.pgs)) } },
