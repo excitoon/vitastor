@@ -1,3 +1,4 @@
+/mon/node_modules/
 *.o
 *.so
 package-lock.json
