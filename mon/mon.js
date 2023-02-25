@@ -530,23 +530,23 @@ class Mon
             {
                 const timer_id = setTimeout(() =>
                 {
-                    this.ws.close();
-                    this.ws = null;
+                    //this.ws.close();
+                    //this.ws = null;
                     ok(false);
                 }, this.config.etcd_mon_timeout);
-                this.ws = new WebSocket(base+'/watch');
+                //this.ws = new WebSocket(base+'/watch');
                 const fail = () =>
                 {
                     ok(false);
                 };
-                this.ws.on('error', fail);
-                this.ws.on('open', () =>
-                {
-                    this.ws.removeListener('error', fail);
-                    if (timer_id)
-                        clearTimeout(timer_id);
-                    ok(true);
-                });
+                //this.ws.on('error', fail);
+                //this.ws.on('open', () =>
+                //{
+                //    this.ws.removeListener('error', fail);
+                //    if (timer_id)
+                //        clearTimeout(timer_id);
+                //    ok(true);
+                //});
             });
             if (ok)
                 break;
@@ -555,10 +555,10 @@ class Mon
             this.ws = null;
             retry++;
         }
-        if (!this.ws)
-        {
-            this.die('Failed to open etcd watch websocket');
-        }
+        //if (!this.ws)
+        //{
+        //    this.die('Failed to open etcd watch websocket');
+        //}
         const cur_addr = this.selected_etcd_url;
         this.ws_alive = true;
         this.ws_keepalive_timer = setInterval(() =>
@@ -566,7 +566,7 @@ class Mon
             if (this.ws_alive)
             {
                 this.ws_alive = false;
-                this.ws.send(JSON.stringify({ progress_request: {} }));
+                //this.ws.send(JSON.stringify({ progress_request: {} }));
             }
             else
             {
@@ -574,90 +574,90 @@ class Mon
                 this.restart_watcher(cur_addr);
             }
         }, (Number(this.config.etcd_keepalive_interval) || 30)*1000);
-        this.ws.on('error', () => this.restart_watcher(cur_addr));
-        this.ws.send(JSON.stringify({
-            create_request: {
-                key: b64(this.etcd_prefix+'/'),
-                range_end: b64(this.etcd_prefix+'0'),
-                start_revision: ''+this.etcd_watch_revision,
-                watch_id: 1,
-                progress_notify: true,
-            },
-        }));
-        this.ws.on('message', (msg) =>
-        {
-            this.ws_alive = true;
-            let data;
-            try
-            {
-                data = JSON.parse(msg);
-            }
-            catch (e)
-            {
-            }
-            if (!data || !data.result)
-            {
-                console.error('Unknown message received from watch websocket: '+msg);
-            }
-            else if (data.result.canceled)
-            {
-                // etcd watch canceled
-                if (data.result.compact_revision)
-                {
-                    // we may miss events if we proceed
-                    console.error('Revisions before '+data.result.compact_revision+' were compacted by etcd, exiting');
-                    this.on_stop(1);
-                }
-                console.error('Watch canceled by etcd, reason: '+data.result.cancel_reason+', exiting');
-                this.on_stop(1);
-            }
-            else if (data.result.created)
-            {
-                // etcd watch created
-            }
-            else
-            {
-                let stats_changed = false, changed = false, pg_states_changed = false;
-                if (this.verbose)
-                {
-                    console.log('Revision '+data.result.header.revision+' events: ');
-                }
-                this.etcd_watch_revision = BigInt(data.result.header.revision)+BigInt(1);
-                for (const e of data.result.events||[])
-                {
-                    this.parse_kv(e.kv);
-                    const key = e.kv.key.substr(this.etcd_prefix.length);
-                    if (key.substr(0, 11) == '/osd/stats/' || key.substr(0, 10) == '/pg/stats/' || key.substr(0, 16) == '/osd/inodestats/')
-                    {
-                        stats_changed = true;
-                    }
-                    else if (key.substr(0, 10) == '/pg/state/')
-                    {
-                        pg_states_changed = true;
-                    }
-                    else if (key != '/stats' && key.substr(0, 13) != '/inode/stats/')
-                    {
-                        changed = true;
-                    }
-                    if (this.verbose)
-                    {
-                        console.log(JSON.stringify(e));
-                    }
-                }
-                if (pg_states_changed)
-                {
-                    this.save_last_clean().catch(this.die);
-                }
-                if (stats_changed)
-                {
-                    this.schedule_update_stats();
-                }
-                if (changed)
-                {
-                    this.schedule_recheck();
-                }
-            }
-        });
+        //this.ws.on('error', () => this.restart_watcher(cur_addr));
+        //this.ws.send(JSON.stringify({
+        //    create_request: {
+        //        key: b64(this.etcd_prefix+'/'),
+        //        range_end: b64(this.etcd_prefix+'0'),
+        //        start_revision: ''+this.etcd_watch_revision,
+        //        watch_id: 1,
+        //        progress_notify: true,
+        //    },
+        //}));
+        //this.ws.on('message', (msg) =>
+        //{
+        //    this.ws_alive = true;
+        //    let data;
+        //    try
+        //    {
+        //        data = JSON.parse(msg);
+        //    }
+        //    catch (e)
+        //    {
+        //    }
+        //    if (!data || !data.result)
+        //    {
+        //        console.error('Unknown message received from watch websocket: '+msg);
+        //    }
+        //    else if (data.result.canceled)
+        //    {
+        //        // etcd watch canceled
+        //        if (data.result.compact_revision)
+        //        {
+        //            // we may miss events if we proceed
+        //            console.error('Revisions before '+data.result.compact_revision+' were compacted by etcd, exiting');
+        //            this.on_stop(1);
+        //        }
+        //        console.error('Watch canceled by etcd, reason: '+data.result.cancel_reason+', exiting');
+        //        this.on_stop(1);
+        //    }
+        //    else if (data.result.created)
+        //    {
+        //        // etcd watch created
+        //    }
+        //    else
+        //    {
+        //        let stats_changed = false, changed = false, pg_states_changed = false;
+        //        if (this.verbose)
+        //        {
+        //            console.log('Revision '+data.result.header.revision+' events: ');
+        //        }
+        //        this.etcd_watch_revision = BigInt(data.result.header.revision)+BigInt(1);
+        //        for (const e of data.result.events||[])
+        //        {
+        //            this.parse_kv(e.kv);
+        //            const key = e.kv.key.substr(this.etcd_prefix.length);
+        //            if (key.substr(0, 11) == '/osd/stats/' || key.substr(0, 10) == '/pg/stats/' || key.substr(0, 16) == '/osd/inodestats/')
+        //            {
+        //                stats_changed = true;
+        //            }
+        //            else if (key.substr(0, 10) == '/pg/state/')
+        //            {
+        //                pg_states_changed = true;
+        //            }
+        //            else if (key != '/stats' && key.substr(0, 13) != '/inode/stats/')
+        //            {
+        //                changed = true;
+        //            }
+        //            if (this.verbose)
+        //            {
+        //                console.log(JSON.stringify(e));
+        //            }
+        //        }
+        //        if (pg_states_changed)
+        //        {
+        //            this.save_last_clean().catch(this.die);
+        //        }
+        //        if (stats_changed)
+        //        {
+        //            this.schedule_update_stats();
+        //        }
+        //        if (changed)
+        //        {
+        //            this.schedule_recheck();
+        //        }
+        //    }
+        //});
     }
 
     async save_last_clean()
@@ -748,7 +748,7 @@ class Mon
         while (1)
         {
             const res = await this.etcd_call('/kv/txn', {
-                compare: [ { target: 'CREATE', create_revision: 0, key: b64(this.etcd_prefix+'/mon/master') } ],
+                compare: [ { target: 1 /*CREATE*/, create_revision: 0, key: b64(this.etcd_prefix+'/mon/master') } ],
                 success: [ { requestPut: { key: b64(this.etcd_prefix+'/mon/master'), value: b64(JSON.stringify(state)), lease: ''+this.etcd_lease_id } } ],
             }, this.etcd_start_timeout, 0);
             if (res.succeeded)
@@ -892,12 +892,12 @@ class Mon
             for (const osd_num of this.all_osds())
             {
                 const key = b64(this.etcd_prefix+'/osd/state/'+osd_num);
-                checks.push({ key, target: 'MOD', result: 'LESS', mod_revision: ''+this.etcd_watch_revision });
+                checks.push({ key, target: 2 /*MOD*/, result: 2 /*LESS*/, mod_revision: ''+this.etcd_watch_revision });
             }
             const res = await this.etcd_call('/kv/txn', {
                 compare: [
-                    { key: b64(this.etcd_prefix+'/mon/master'), target: 'LEASE', lease: ''+this.etcd_lease_id },
-                    { key: b64(this.etcd_prefix+'/config/pgs'), target: 'MOD', mod_revision: ''+this.etcd_watch_revision, result: 'LESS' },
+                    { key: b64(this.etcd_prefix+'/mon/master'), target: 4 /*LEASE*/, lease: ''+this.etcd_lease_id },
+                    { key: b64(this.etcd_prefix+'/config/pgs'), target: 2 /*MOD*/, mod_revision: ''+this.etcd_watch_revision, result: 2 /*LESS*/ },
                     ...checks,
                 ],
                 success: [
@@ -983,9 +983,9 @@ class Mon
             // Sooo we probably want to change our storage scheme for PG histories...
             request.compare.push({
                 key: b64(this.etcd_prefix+'/pg/history/'+pool_id+'/'+(i+1)),
-                target: 'MOD',
+                target: 2 /*MOD*/,
                 mod_revision: ''+this.etcd_watch_revision,
-                result: 'LESS',
+                result: 2 /*LESS*/,
             });
             if (pg_history[i])
             {
@@ -1330,8 +1330,8 @@ class Mon
     async save_pg_config(etcd_request = { compare: [], success: [] })
     {
         etcd_request.compare.push(
-            { key: b64(this.etcd_prefix+'/mon/master'), target: 'LEASE', lease: ''+this.etcd_lease_id },
-            { key: b64(this.etcd_prefix+'/config/pgs'), target: 'MOD', mod_revision: ''+this.etcd_watch_revision, result: 'LESS' },
+            { key: b64(this.etcd_prefix+'/mon/master'), target: 4 /*LEASE*/, lease: ''+this.etcd_lease_id },
+            { key: b64(this.etcd_prefix+'/config/pgs'), target: 2 /*MOD*/, mod_revision: ''+this.etcd_watch_revision, result: 2 /*LESS*/ },
         );
         etcd_request.success.push(
             { requestPut: { key: b64(this.etcd_prefix+'/config/pgs'), value: b64(JSON.stringify(this.state.config.pgs)) } },
