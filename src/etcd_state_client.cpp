@@ -322,23 +322,28 @@ void etcd_state_client_t::start_etcd_watcher()
     }
     if (this->log_level > 1)
         printf("Trying to connect to etcd websocket at %s\n", etcd_address.c_str());
-    etcd_watch_ws = open_websocket(tfd, etcd_address, etcd_api_path+"/watch", etcd_slow_timeout,
-        [this, cur_addr = selected_etcd_address](const http_response_t *msg)
+
+    std::vector<std::pair<int, std::string>> watch_keys =
     {
-        if (msg->body.length())
+        { ETCD_CONFIG_WATCH_ID, "/config" },
+        { ETCD_OSD_STATE_WATCH_ID, "/osd/state" },
+        { ETCD_PG_STATE_WATCH_ID, "/pg/state" },
+        { ETCD_PG_HISTORY_WATCH_ID, "/pg/history" }
+    };
+
+    pick_next_etcd();
+    for (auto & [watch_id, path] : watch_keys)
+    {
+        auto watch_handler = [this, watch_id, cur_addr = selected_etcd_address](const http_response_t *response)
         {
-            ws_alive = 1;
             std::string json_err;
-            json11::Json data = json11::Json::parse(msg->body, json_err);
-            if (json_err != "")
+            json11::Json data;
+            response->parse_json_response(json_err, data);
+            if (json_err.empty())
             {
-                fprintf(stderr, "Bad JSON in etcd event: %s, ignoring event\n", json_err.c_str());
-            }
-            else
-            {
+                ws_alive = 1;
                 if (data["result"]["created"].bool_value())
                 {
-                    uint64_t watch_id = data["result"]["watch_id"].uint64_value();
                     if (watch_id == ETCD_CONFIG_WATCH_ID ||
                         watch_id == ETCD_PG_STATE_WATCH_ID ||
                         watch_id == ETCD_PG_HISTORY_WATCH_ID ||
@@ -408,72 +413,73 @@ void etcd_state_client_t::start_etcd_watcher()
                     on_change_hook(changes);
                 }
             }
-        }
-        if (msg->eof)
-        {
-            if (cur_addr == selected_etcd_address)
-            {
-                fprintf(stderr, "Disconnected from etcd %s\n", selected_etcd_address.c_str());
-                selected_etcd_address = "";
-            }
             else
-                fprintf(stderr, "Disconnected from etcd\n");
-            if (etcd_watch_ws)
             {
-                http_close(etcd_watch_ws);
-                etcd_watch_ws = NULL;
-            }
-            if (etcd_watches_initialised == 0)
-            {
-                // Connection not established, retry in <etcd_quick_timeout>
-                tfd->set_timer(etcd_quick_timeout, false, [this](int)
+                if (cur_addr == selected_etcd_address)
                 {
+                    fprintf(stderr, "Disconnected from etcd %s\n", selected_etcd_address.c_str());
+                    selected_etcd_address = "";
+                }
+                else
+                    fprintf(stderr, "Disconnected from etcd\n");
+                if (etcd_watch_ws)
+                {
+                    http_close(etcd_watch_ws);
+                    etcd_watch_ws = NULL;
+                }
+                if (etcd_watches_initialised == 0)
+                {
+                    // Connection not established, retry in <etcd_quick_timeout>
+                    tfd->set_timer(etcd_quick_timeout, false, [this](int)
+                    {
+                        start_etcd_watcher();
+                    });
+                }
+                else if (etcd_watches_initialised > 0)
+                {
+                    // Connection was live, retry immediately
                     start_etcd_watcher();
-                });
+                }
             }
-            else if (etcd_watches_initialised > 0)
-            {
-                // Connection was live, retry immediately
-                start_etcd_watcher();
+        };
+        auto body = json11::Json {
+            json11::Json::object {
+                { "create_request", json11::Json::object
+                    {
+                        { "key", base64_encode(etcd_prefix+path+"/") },
+                        { "range_end", base64_encode(etcd_prefix+path+"0") },
+                        { "start_revision", etcd_watch_revision },
+                        { "watch_id", watch_id },
+                        { "progress_notify", true }
+                    }
+                }
             }
+        };
+
+        std::string etcd_address = selected_etcd_address;
+        std::string etcd_api_path;
+        int pos = etcd_address.find('/');
+        if (pos >= 0)
+        {
+            etcd_api_path = etcd_address.substr(pos);
+            etcd_address = etcd_address.substr(0, pos);
         }
-    });
-    http_post_message(etcd_watch_ws, WS_TEXT, json11::Json(json11::Json::object {
-        { "create_request", json11::Json::object {
-            { "key", base64_encode(etcd_prefix+"/config/") },
-            { "range_end", base64_encode(etcd_prefix+"/config0") },
-            { "start_revision", etcd_watch_revision },
-            { "watch_id", ETCD_CONFIG_WATCH_ID },
-            { "progress_notify", true },
-        } }
-    }).dump());
-    http_post_message(etcd_watch_ws, WS_TEXT, json11::Json(json11::Json::object {
-        { "create_request", json11::Json::object {
-            { "key", base64_encode(etcd_prefix+"/osd/state/") },
-            { "range_end", base64_encode(etcd_prefix+"/osd/state0") },
-            { "start_revision", etcd_watch_revision },
-            { "watch_id", ETCD_OSD_STATE_WATCH_ID },
-            { "progress_notify", true },
-        } }
-    }).dump());
-    http_post_message(etcd_watch_ws, WS_TEXT, json11::Json(json11::Json::object {
-        { "create_request", json11::Json::object {
-            { "key", base64_encode(etcd_prefix+"/pg/state/") },
-            { "range_end", base64_encode(etcd_prefix+"/pg/state0") },
-            { "start_revision", etcd_watch_revision },
-            { "watch_id", ETCD_PG_STATE_WATCH_ID },
-            { "progress_notify", true },
-        } }
-    }).dump());
-    http_post_message(etcd_watch_ws, WS_TEXT, json11::Json(json11::Json::object {
-        { "create_request", json11::Json::object {
-            { "key", base64_encode(etcd_prefix+"/pg/history/") },
-            { "range_end", base64_encode(etcd_prefix+"/pg/history0") },
-            { "start_revision", etcd_watch_revision },
-            { "watch_id", ETCD_PG_HISTORY_WATCH_ID },
-            { "progress_notify", true },
-        } }
-    }).dump());
+        std::string req = body.dump();
+        req = "POST "+etcd_api_path+"/watch HTTP/1.1\r\n"
+            "Host: "+etcd_address+"\r\n"
+            "Content-Type: application/json\r\n"
+            "Content-Length: "+std::to_string(req.size())+"\r\n"
+            "Connection: keep-alive\r\n"
+            "Keep-Alive: timeout="+std::to_string(etcd_keepalive_timeout)+"\r\n"
+            "\r\n"+req;
+        if (watch_clients.count(watch_id))
+        {
+            http_close(watch_clients[watch_id]);
+        }
+        auto cli = http_init(tfd);
+        watch_clients[watch_id] = cli;
+        http_request(cli, etcd_address, req, { .want_streaming = true, .keepalive = true }, watch_handler);
+    }
     if (on_start_watcher_hook)
     {
         on_start_watcher_hook(etcd_watch_ws);

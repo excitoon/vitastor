@@ -114,6 +114,8 @@ public:
     std::map<inode_t, inode_config_t> inode_config;
     std::map<std::string, inode_t> inode_by_name;
 
+    std::map<unsigned, http_co_t *> watch_clients;
+
     std::function<void(std::map<std::string, etcd_kv_t> &)> on_change_hook;
     std::function<void(json11::Json::object &)> on_load_config_hook;
     std::function<json11::Json()> load_pgs_checks_hook;
